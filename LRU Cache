@@ -1,0 +1,125 @@
+#define MAX_KEY 10000
+
+typedef struct CacheNode_S
+{
+    int key;
+    int value;
+    struct CacheNode_S * prev;
+    struct CacheNode_S * next;
+} CacheNode;
+
+typedef struct {
+    CacheNode * first;
+    CacheNode * last;
+    CacheNode ** LChash;
+    int count;
+    int capacity;
+} LRUCache;
+
+void lRUCacheFree(LRUCache* obj);
+
+void moveNodeToFront(LRUCache* obj, CacheNode * node)
+{
+    if (node->prev != NULL)
+    {
+        node->prev->next = node->next;
+        if (node->next)
+            node->next->prev = node->prev;
+        if (obj->last == node)
+            obj->last = node->prev;
+        node->prev = NULL;
+        node->next = obj->first;
+        obj->first->prev = node;
+        obj->first = node;
+    }
+}
+
+LRUCache* lRUCacheCreate(int capacity) {
+    LRUCache * cacheInst = malloc(sizeof(LRUCache));
+    if (cacheInst == NULL)
+        return NULL;
+
+    cacheInst->LChash = malloc(sizeof(CacheNode*) * MAX_KEY);
+    if (cacheInst->LChash == NULL)
+    {
+        free(cacheInst);
+        return NULL;
+    }
+
+    for (int i = 0; i < MAX_KEY; i++)
+        cacheInst->LChash[i] = NULL;
+
+    cacheInst->count = 0;
+    cacheInst->capacity = capacity;
+    cacheInst->first = cacheInst->last = NULL;
+    return cacheInst;
+}
+
+int lRUCacheGet(LRUCache* obj, int key) 
+{
+    CacheNode * node = obj->LChash[key];
+
+    if (node == NULL)
+        return -1;
+
+    moveNodeToFront(obj, node);
+    return node->value;
+}
+
+void lRUCachePut(LRUCache* obj, int key, int value) 
+{
+    // Key exists. Update value and put node to the front.
+    if (obj->LChash[key] != NULL)
+    {
+        CacheNode * node = obj->LChash[key];
+        node->value = value;
+
+        moveNodeToFront(obj, node);
+        return;
+    }
+
+    // Evict LRU (ie from the last)
+    if (obj->count == obj->capacity)
+    {
+        CacheNode * node = obj->last;
+
+        obj->LChash[node->key] = NULL;
+        obj->LChash[key] = node;
+
+        node->key = key;
+        node->value = value;
+
+        moveNodeToFront(obj, node);
+        return;
+    }
+
+    // LOAD NEW TO Cache
+    CacheNode * node = malloc(sizeof(CacheNode));
+    if (node == NULL)
+    {
+        lRUCacheFree(obj);
+        return;
+    }
+
+    node->key = key;
+    node->value = value;
+    node->prev = NULL;
+    node->next = obj->first;
+    if (obj->first)
+        obj->first->prev = node;
+    
+    obj->first = node;
+    obj->count++;
+    
+    if (obj->last == NULL)
+        obj->last = node;
+    obj->LChash[key] = node;
+}
+
+void lRUCacheFree(LRUCache* obj) 
+{
+    for (int i = 0; i < MAX_KEY; i++)
+        free(obj->LChash[i]);
+    free(obj->LChash);
+    free(obj);
+}

@@ -1,0 +1,63 @@
+#include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
+
+bool canStamp(char* target, char* stamp, int index, int stampLen) {
+    bool hasMatched = false;
+    for (int i = 0; i < stampLen; i++) {
+        if (target[index + i] != '?' && target[index + i] != stamp[i]) {
+            return false;
+        }
+        if (target[index + i] == stamp[i]) {
+            hasMatched = true;
+        }
+    }
+    return hasMatched;
+}
+
+void doStamp(char* target, int index, int stampLen, int* questionMarks) {
+    for (int i = 0; i < stampLen; i++) {
+        if (target[index + i] != '?') {
+            target[index + i] = '?';
+            (*questionMarks)++;
+        }
+    }
+}
+
+int* movesToStamp(char* stamp, char* target, int* returnSize) {
+    int stampLen = strlen(stamp);
+    int targetLen = strlen(target);
+    int* result = (int*)malloc(targetLen * sizeof(int));
+    int resultIndex = 0;
+    bool* visited = (bool*)calloc(targetLen, sizeof(bool));
+    int questionMarks = 0;
+
+    while (questionMarks < targetLen) {
+        bool stamped = false;
+
+        for (int i = 0; i <= targetLen - stampLen; i++) {
+            if (!visited[i] && canStamp(target, stamp, i, stampLen)) {
+                doStamp(target, i, stampLen, &questionMarks);
+                visited[i] = true;
+                result[resultIndex++] = i;
+                stamped = true;
+            }
+        }
+
+        if (!stamped) {
+            free(result);
+            free(visited);
+            *returnSize = 0;
+            return NULL;
+        }
+    }
+    for (int i = 0; i < resultIndex / 2; i++) {
+        int temp = result[i];
+        result[i] = result[resultIndex - i - 1];
+        result[resultIndex - i - 1] = temp;
+    }
+
+    free(visited);
+    *returnSize = resultIndex;
+    return result;
+}
